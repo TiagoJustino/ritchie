@@ -1,4 +1,4 @@
-# ritchie
+# Ritchie the DeskBuddy
 
 This is a work in progresss to create a desktop robot to help you keep track of
 your google calendar events.
