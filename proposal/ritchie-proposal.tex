@@ -31,11 +31,21 @@
 % DOI string from ACM form confirmation}
 %% EXAMPLE END
 
+\copyrightinfo{Copyright 2015 Dhananjai Hariharan and Tiago Justino \\
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License.  You may obtain a copy of the
+License at\\
+http://www.apache.org/licenses/LICENSE-2.0\\
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations under the License.}
+
 % Paper metadata (use plain text, for PDF inclusion and later
 % re-using, if desired).  Use \emtpyauthor when submitting for review
 % so you remain anonymous.
 \def\plaintitle{Ritchie the DeskBuddy}
-\def\plainauthor{Dhananjai Hariharan, Tiago Justino}
+\def\plainauthor{}
 \def\emptyauthor{}
 \def\plainkeywords{Authors' choice; of terms; separated; by
   semicolons; include commas, within terms only; required.}
@@ -174,7 +184,78 @@ stairs vs.\ those that chose to use the elevator. While each of these were
 implemented differently, they shared a common goal of nudging a user towards an
 action and observing common behavioral changes over extended periods of time.
 
-\nocite{ishii1997tangible}
+In \textit{Tangible Bits} \cite{ishii1997tangible}, Hiroshi Ishii proposes the
+concept of coupling the digital world (bits of information) into a physical
+object, thereby making it 'tangible'. In line with this concept, Ritchie The
+DeskBuddy would be a Tangible Bit, where the object would mirror digital
+information and events, acting as a 'phicon', or a physical icon.
+\textit{ReaDIYmate}\footnote{ReaDIYmate: http://readiymate.com/} is a
+commercially available DIY (Do-It-Yourself) kit for building internet-connected
+paper objects that react to events in the digital world.  Similarly, few other
+devices exist that physically react to digital events and interactions -
+\textit{Olly}\footnote{Olly: http://www.ollyfactory.com/} is a device that
+releases a scent for certain digital events/interactions. Similarly,
+\textit{Polly}\footnote{Polly project: http://www.ollyfactory.com/polly/} is a
+device that releases a ball of candy for certain digital events/interactions.
+
+Besides the above mentioned research and projects, there is sufficient work in
+the area of 3D printed robots and robot parts\cite{megaro2015interactive,
+schulz2015interactive}\footnote{Instructables page: ``GearBot: A Dual-speed,
+Gear-driven robot'':
+http://www.instructables.com/id/GearBot-A-Dual-Speed-Gear-Driven-Bot/?ALLSTEPS}\footnote{Cubify
+- Commercial 3D printed parts for custom designed robots:
+http://cubify.com/store/mrn}, as well as numerous resources for accessing 3D
+models of robots and parts for 3D printing.
+
+\section{Project Description}
+
+Ritchie The DeskBuddy is a 3D printed robotic tiger that sits on a user's desk
+and reminds them of events or activities that need to be done.
+
+\subsection{Implementation details}
+
+\subsubsection{Presented information}
+
+The device would reflect reminders, events and tasks relevant to a user. The
+same concept can be used to developing and practicing some new habits as well,
+e.g.\ reading one chapter of a book everyday, running 5K, practice sketching
+etc.
+
+\subsubsection{Data source}
+
+For this project, Google Calendar\footnote{Google Calendar API:
+https://developers.google.com/google-apps/calendar/} will be used as the data
+source, as it is already widely used by many users as an application for
+recording activities and keeping track of events.
+
+\subsubsection{Device abilities}
+
+The 3D printed robot will be able to do the following:
+\begin{itemize}
+  \item Perform a waving action (arm movement);
+  \item Move on a flat surface (walk/drive);
+  \item Play certain sounds for certain events;
+  \item Blink lights to attract attention.
+\end{itemize}
+
+\subsubsection{Mapping of information to visualization}
+TODO
+
+\subsubsection{Components}
+
+\begin{itemize}
+  \item Particle Photon
+  \item 1200mAh Lithium battery
+  \item Photon battery shield
+  \item Continuous Rotation Micro Servo (x1)
+  \item 180deg rotation Micro Servo (x1)
+  \item Accelerometer
+  \item Piezoelectric speaker
+  \item LEDs
+\end{itemize}
+
+\section{Project Milestones}
+TODO
 
 %\marginpar{%
 %  \vspace{-45pt} \fbox{%
