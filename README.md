@@ -1,5 +1,6 @@
 # ritchie
 
 This is a work in progresss to create a desktop robot to help you keep track of
-your google calendar events. Check the proposal on
-[https://raw.githubcontent.com/TiagoJustino/ritchie/master/proposal/ritchie-proposal.pdf](https://raw.githubcontent.com/TiagoJustino/ritchie/master/proposal/ritchie-proposal.pdf).
+your google calendar events.
+
+[**Project Proposal**](https://github.com/TiagoJustino/ritchie/blob/master/proposal/ritchie-proposal.pdf)
