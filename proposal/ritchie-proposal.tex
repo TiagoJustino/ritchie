@@ -47,8 +47,7 @@ specific language governing permissions and limitations under the License.}
 \def\plaintitle{Ritchie the DeskBuddy}
 \def\plainauthor{}
 \def\emptyauthor{}
-\def\plainkeywords{Authors' choice; of terms; separated; by
-  semicolons; include commas, within terms only; required.}
+\def\plainkeywords{Ambient Device; Tangible Interface; Personification; 3D Printed Robots}
 \def\plaingeneralterms{Documentation, Standardization}
 
 \title{Ritchie the DeskBuddy}
@@ -100,14 +99,18 @@ specific language governing permissions and limitations under the License.}
 
 % Do not change the page size or page settings.
 \begin{abstract}
-  TODO
+  Ritchie The DeskBuddy is a 3D printed robotic tiger that works as an ambient
+  device for reminding and notifying users about events relevant to their life.
+  In this project, we attempt a different approach to combine digital
+  information into a physical object, personified by an avatar. Through the use
+  of such an ambient device, we seek to be able to drive user reaction and to
+  also form an emotional bond with the user. We also aim that such a device can
+  be used to imbibe new habits in users.
 \end{abstract}
 
 \keywords{\plainkeywords}
 
-\category{H.5.m}{Information interfaces and presentation (e.g.,
-  HCI)}{Miscellaneous}\category{See}{\url{http://acm.org/about/class/1998/}}{for
-  full list of ACM classifiers. This section is required.}
+\category{H.5.2}{Information interfaces and presentation}{User Interfaces}
 
 \section{Introduction}
 
@@ -186,9 +189,9 @@ action and observing common behavioral changes over extended periods of time.
 
 In \textit{Tangible Bits} \cite{ishii1997tangible}, Hiroshi Ishii proposes the
 concept of coupling the digital world (bits of information) into a physical
-object, thereby making it 'tangible'. In line with this concept, Ritchie The
+object, thereby making it `tangible'. In line with this concept, Ritchie The
 DeskBuddy would be a Tangible Bit, where the object would mirror digital
-information and events, acting as a 'phicon', or a physical icon.
+information and events, acting as a `phicon', or a physical icon.
 \textit{ReaDIYmate}\footnote{ReaDIYmate: http://readiymate.com/} is a
 commercially available DIY (Do-It-Yourself) kit for building internet-connected
 paper objects that react to events in the digital world.  Similarly, few other
@@ -212,16 +215,16 @@ models of robots and parts for 3D printing.
 Ritchie The DeskBuddy is a 3D printed robotic tiger that sits on a user's desk
 and reminds them of events or activities that need to be done.
 
-\subsection{Implementation details}
+\subsection{Implementation Details}
 
-\subsubsection{Presented information}
+\subsubsection{Information Displayed}
 
 The device would reflect reminders, events and tasks relevant to a user. The
 same concept can be used to developing and practicing some new habits as well,
 e.g.\ reading one chapter of a book everyday, running 5K, practice sketching
 etc.
 
-\subsubsection{Data source}
+\subsubsection{Data Source}
 
 For this project, Google Calendar\footnote{Google Calendar API:
 https://developers.google.com/google-apps/calendar/} will be used as the data
@@ -239,23 +242,58 @@ The 3D printed robot will be able to do the following:
 \end{itemize}
 
 \subsubsection{Mapping of information to visualization}
-TODO
+
+The robot will be made to wave its arms when a \textbf{regular event} occurs. A
+user can acknowledge this by simply tapping it. For events that occur over long
+periods of time, the robot will repeat this behavior as a gentle reminder,
+after a certain time period. When an \textbf{important event} is about to
+occur, the robot will wave its arms and run around in a circle, while making
+some sounds so as to draw attention. Events flagged as \textbf{tasks} or
+\textbf{habits}, will be shown through similar device behavior. A user can
+register task completion by lifting and shaking the robot, before placing it
+back. The robot will respond by playing a sound to acknowledge this. For each
+of these event scenarios, different light patterns will also be used to enhance
+the visual effect.
 
 \subsubsection{Components}
 
+The following components will be used to build Ritchie the DeskBuddy:
+
 \begin{itemize}
-  \item Particle Photon
-  \item 1200mAh Lithium battery
-  \item Photon battery shield
-  \item Continuous Rotation Micro Servo (x1)
-  \item 180deg rotation Micro Servo (x1)
-  \item Accelerometer
-  \item Piezoelectric speaker
-  \item LEDs
+  \item Particle Photon;
+  \item 1200mAh Lithium battery;
+  \item Photon battery shield;
+  \item Continuous Rotation Micro Servo (x1);
+  \item 180deg rotation Micro Servo (x1);
+  \item Accelerometer;
+  \item Piezoelectric speaker;
+  \item LEDs.
 \end{itemize}
 
-\section{Project Milestones}
-TODO
+\subsubsection{Implementation Steps}
+
+The following steps will be taken for the development of this project:
+
+\begin{itemize}
+  \item Study Google Calendar API:
+  \begin{itemize}
+    \item Authenticate to google calendar;
+    \item Get list of events from google calendar;
+  \end{itemize}
+  \item Access google calendar API from Photon;
+  \item Prototype robot abilities (breadboard):
+  \begin{itemize}
+    \item Use continuous motor with photon;
+  \end{itemize}
+  \item Prototype robot movement with continuous motor;
+  \item Prototype arms movement with servo motor;
+  \item Design and 3D print robot case;
+  \item Assemble robot;
+  \item Prepare demo;
+  \item Record and edit video;
+  \item Write final report.
+\end{itemize}
+
 
 %\marginpar{%
 %  \vspace{-45pt} \fbox{%
@@ -334,9 +372,6 @@ TODO
 %      space.}~\label{tab:table2}
 %  \end{minipage}
 %\end{margintable}
-
-\nocite{megaro2015interactive}
-\nocite{schulz2015interactive}
 
 \balance{}
 
