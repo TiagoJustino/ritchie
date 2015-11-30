@@ -9,6 +9,8 @@ var SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 var TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
     process.env.USERPROFILE) + '/.credentials/';
 var TOKEN_PATH = TOKEN_DIR + 'calendar-nodejs-quickstart.json';
+var calendar = google.calendar('v3');
+var auth
 
 // Load client secrets from a local file.
 fs.readFile('client_secret.json', function processClientSecrets(err, content) {
@@ -18,8 +20,13 @@ fs.readFile('client_secret.json', function processClientSecrets(err, content) {
   }
   // Authorize a client with the loaded credentials, then call the
   // Google Calendar API.
-  authorize(JSON.parse(content), listEvents);
+  authorize(JSON.parse(content), userAuthorized);
 });
+
+function userAuthorized(_auth) {
+  auth = _auth;
+  listEvents();
+}
 
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
@@ -95,55 +102,59 @@ function storeToken(token) {
   console.log('Token stored to ' + TOKEN_PATH);
 }
 
+function gotEventsList(err, response) {
+  if (err || !response || !response.items) {
+    console.log('The API returned an error: ' + err);
+    return;
+  }
+  var events = response.items;
+  if (events.length == 0) {
+    console.log('No upcoming events found for %s.', response.summary);
+  } else {
+    console.log('Upcoming %d events for %s:', events.length, response.summary);
+    for (var i = 0; i < events.length; i++) {
+      var event = events[i];
+      var start = event.start.dateTime || event.start.date;
+      console.log('%s - %s', start, event.summary);
+    }
+  }
+}
+
+function gotCalendarsList(err, response) {
+  if (err) {
+    console.log('The API returned an error: ' + err);
+    return;
+  }
+  var calendars = response.items;
+  if (calendars.length == 0) {
+    console.log('No calendars found.');
+  } else {
+    console.log('Found ' + calendars.length + ' calendars:');
+    for (var i = 0; i < calendars.length; i++) {
+      var calendarList = calendars[i];
+      var params = {
+        auth: auth,
+        calendarId: calendarList.id,
+        timeMin: (new Date()).toISOString(),
+        maxResults: 10,
+        singleEvents: true,
+        orderBy: 'startTime'
+      };
+
+      calendar.events.list(params, gotEventsList);
+    }
+  }
+}
+
 /**
  * Lists the next 10 events on the user's primary calendar.
  *
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
-function listEvents(auth) {
-  var calendar = google.calendar('v3');
-
-  calendar.calendarList.list({
+function listEvents() {
+  var params = {
     auth: auth,
-  }, function(err, response) {
-    if (err) {
-      console.log('The API returned an error: ' + err);
-      return;
-    }
-    var calendars = response.items;
-    if (calendars.length == 0) {
-      console.log('No calendars found.');
-    } else {
-      console.log('Found ' + calendars.length + ' calendars:');
-      for (var i = 0; i < calendars.length; i++) {
-        var calendarList = calendars[i];
+  };
 
-        calendar.events.list({
-          auth: auth,
-          calendarId: calendarList.id,
-          timeMin: (new Date()).toISOString(),
-          maxResults: 10,
-          singleEvents: true,
-          orderBy: 'startTime'
-        }, function(err, response) {
-          if (err || !response || !response.items) {
-            console.log('The API returned an error: ' + err);
-            return;
-          }
-          var events = response.items;
-          if (events.length == 0) {
-            console.log('No upcoming events found for %s.', response.summary);
-          } else {
-            console.log('Upcoming %d events for %s:', events.length, response.summary);
-            for (var i = 0; i < events.length; i++) {
-              var event = events[i];
-              var start = event.start.dateTime || event.start.date;
-              console.log('%s - %s', start, event.summary);
-            }
-          }
-        });
-
-      }
-    }
-  });
+  calendar.calendarList.list(params, gotCalendarsList);
 }
