@@ -11,7 +11,10 @@ Servo servo;
 MMA8452Q accel;
 
 int ledFrequency = 1000;
-int servoPin = D3;
+int buzzerPin = D2;
+int motorPin = D3;
+int ledPin = D4;
+int servoPin = D5;
 int servoPos = 180;
 int ledState = HIGH;
 

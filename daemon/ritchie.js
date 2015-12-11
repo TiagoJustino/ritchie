@@ -115,7 +115,7 @@ function gotEventsList(err, response) {
     for (var i = 0; i < events.length; i++) {
       var event = events[i];
       var start = event.start.dateTime || event.start.date;
-      console.log('%s - %s', start, event.summary);
+      console.log('%s - %s - %s', start, event.summary, event.colorId);
     }
   }
 }
@@ -152,9 +152,22 @@ function gotCalendarsList(err, response) {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 function listEvents() {
+  /*
   var params = {
     auth: auth,
   };
-
   calendar.calendarList.list(params, gotCalendarsList);
+  */
+
+  var params = {
+    auth: auth,
+    calendarId: 'primary',
+    timeMin: (new Date()).toISOString(),
+    maxResults: 20,
+    singleEvents: true,
+    orderBy: 'startTime'
+  };
+
+  calendar.events.list(params, gotEventsList);
 }
+
