@@ -144,6 +144,18 @@ $python -m SimpleHTTPServer 8000 -->
               else {
                 console.log(event.summary + ' (' + when + ')' + 'colorID: ' + event.colorId);
                 appendPre(event.summary + ' (' + when + ')' + event.colorId);
+
+                /*
+                - at this point, save event name, event startTime and colorID
+                for the event --saveAs closest upcoming event
+
+                - check if any other events in the list start at the same time
+                   - If yes, compare flags (colorId) of the concurrent events
+                     - AlertType should be that of the most important event
+
+                - call SparkFunction at the specified time and pass the following parameters:
+                   :-AlertType
+                */
               }
             }
           }
