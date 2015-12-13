@@ -1,5 +1,5 @@
 #ifndef UNKOWN_SONG_H
-#define UNKOWN_unknownSong_H
+#define UNKOWN_SONG_H
 #include "pitches.h"
 
 int unknownSongMelodyLength = 9;
