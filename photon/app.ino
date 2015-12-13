@@ -17,30 +17,40 @@
 #define MEDIUM_SERVO_FREQUENCY 500
 #define HIGH_SERVO_FREQUENCY 1000
 
+#define INACTIVE 0
+#define   ACTIVE 1
+
 Servo servo;
 Servo motor;
 
 MMA8452Q accel;
 
-int ledFrequency = 1000;
+unsigned long ledFrequency = 1000;
 int buzzerPin = D2;
 int motorPin = D3;
 int ledPin = D4;
 int servoPin = D5;
+int debugLedPin = D7;
 int servoPos = 180;
-int ledState = HIGH;
+int debugLedState = HIGH;
+
+// how long the robot will be active per cicle.
+// for example, activeInterval = 10000 and cicleInterval = 900000 means:
+// the robot will be active for 10s every 15 min.
+unsigned long activeInterval;
+unsigned long cicleInterval;
+unsigned long lastActive;
+unsigned long setIdleModeTime;
 
 int servoFrequency;
-boolean LEDBlinking;
+boolean ledBlinking;
 int melodyLengh;
 int* melody;
 float* melodyDurations;
-unsigned long servoInterval;
-unsigned LEDInterval;
-int motorInterval;
+int motorCurrentSpeed = 90;
 int motorSpeed;
-int motorMovementDuration;
-int motorFrequency;
+unsigned long motorMovementDuration;
+unsigned long motorFrequency;
 
 boolean shaking = false;
 
@@ -56,88 +66,143 @@ struct {
 unsigned long readAccelCounter;
 unsigned long ledSignalingCounter;
 
-int setState(String arg) {
+int state = INACTIVE;
+
+void setIdleMode();
+void setRegularMode();
+void setImportantMode();
+void setHabitMode();
+void setGymMode();
+int setMode(String arg);
+
+void setup() {
+  accel.init();
+  Serial.begin(9600);
+
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(debugLedPin, OUTPUT);
+  motor.attach(motorPin);
+  servo.attach(servoPin);
+
+  digitalWrite(debugLedPin, debugLedState);
+
+  motor.write(motorCurrentSpeed);
+  servo.write(servoPos);
+
+  Particle.function("setmode", setMode);
+  setIdleMode();
+
+  Serial.println("finished setup");
+}
+
+void setIdleMode() {
+  state = INACTIVE;
+  activeInterval = 0;
+  cicleInterval = 0;
+  servoFrequency = 0;
+  ledBlinking = false;
+  melody = NULL;
+  melodyLengh = 0;
+  melodyDurations = NULL;
+  motorSpeed = 0;
+  motorMovementDuration = 0;
+  motorFrequency = 0;
+}
+
+void setRegularMode() {
+  state = ACTIVE;
+  activeInterval = 10000;
+  cicleInterval = 900000; // 15 minutes
+  servoFrequency = LOW_SERVO_FREQUENCY;
+  ledBlinking = true;
+  melody = beepMelody;
+  melodyLengh = beepMelodyLength;
+  melodyDurations = beepNoteDurations;
+  motorSpeed = 0;
+  motorMovementDuration = 0;
+  motorFrequency = 0;
+}
+
+void setImportantMode() {
+  state = ACTIVE;
+  activeInterval = 10000;
+  cicleInterval = 900000; // 15 minutes
+  servoFrequency = HIGH_SERVO_FREQUENCY;
+  ledBlinking = true;
+  melody = unknownSongMelody;
+  melodyLengh = unknownSongMelodyLength;
+  melodyDurations = unknownSongNoteDurations;
+  motorSpeed = 90;
+  motorMovementDuration = 250;
+  motorFrequency = 1000;
+}
+
+void setHabitMode() {
+  state = ACTIVE;
+  activeInterval = 10000;
+  cicleInterval = 900000; // 15 minutes
+  servoFrequency = MEDIUM_SERVO_FREQUENCY;
+  ledBlinking = true;
+  melody = rockyMelody;
+  melodyLengh = rockyMelodyLength;
+  melodyDurations = rockyNoteDurations;
+  motorSpeed = 45;
+  motorMovementDuration = 500;
+  motorFrequency = 2000;
+}
+
+void setGymMode() {
+  state = ACTIVE;
+  activeInterval = 10000;
+  cicleInterval = 900000; // 15 minutes
+  servoFrequency = MEDIUM_SERVO_FREQUENCY;
+  ledBlinking = true;
+  melody = eyeMelody;
+  melodyLengh = eyeMelodyLength;
+  melodyDurations = eyeNoteDurations;
+  motorSpeed = 45;
+  motorMovementDuration = 500;
+  motorFrequency = 2000;
+}
+
+int setMode(String arg) {
   int pos, value;
-  char state[64], strValue[64];
+  char mode[64], strValue[64];
   const char *argp;
 
+  // TODO Check the case of string without white space
   argp = arg.c_str();
   pos = strchr(argp, ' ') - argp;
-  strncpy(state, argp, pos);
-  state[pos] = '\0';
+  strncpy(mode, argp, pos);
+  mode[pos] = '\0';
   strcpy(strValue, argp + pos + 1);
   value = atoi(strValue);
 
-  if(!strcmp(state, "idle")) {
-    Serial.println("Received idle");
-  } else if (!strcmp(state, "regular")) {
-    servoFrequency = LOW_SERVO_FREQUENCY;
-    LEDBlinking = true;
-    melody = beepMelody;
-    melodyLengh = beepMelodyLength;
-    melodyDurations = beepNoteDurations;
-    servoInterval = 900000; // 15 minutes
-    LEDInterval   = 900000;
-    motorInterval = 0;
-    motorSpeed = 0;
-    motorMovementDuration = 0;
-    motorFrequency = 0;
-  } else if (!strcmp(state, "important")) {
-    servoFrequency = HIGH_SERVO_FREQUENCY;
-    LEDBlinking = true;
-    melody = unknownSongMelody;
-    melodyLengh = unknownSongMelodyLength;
-    melodyDurations = unknownSongNoteDurations;
-    servoInterval = 900000; // 15 minutes
-    LEDInterval   = 900000;
-    motorInterval = 900000;
-    motorSpeed = 90;
-    motorMovementDuration = 250;
-    motorFrequency = 1000;
-  } else if (!strcmp(state, "habit")) {
-    servoFrequency = MEDIUM_SERVO_FREQUENCY;
-    LEDBlinking = true;
-    melody = rockyMelody;
-    melodyLengh = rockyMelodyLength;
-    melodyDurations = rockyNoteDurations;
-    servoInterval = 900000; // 15 minutes
-    LEDInterval   = 900000;
-    motorInterval = 900000;
-    motorSpeed = 45;
-    motorMovementDuration = 500;
-    motorFrequency = 2000;
-  } else if (!strcmp(state, "gym")) {
-    servoFrequency = MEDIUM_SERVO_FREQUENCY;
-    LEDBlinking = true;
-    melody = eyeMelody;
-    melodyLengh = eyeMelodyLength;
-    melodyDurations = eyeNoteDurations;
-    servoInterval = 900000; // 15 minutes
-    LEDInterval   = 900000;
-    motorInterval = 900000;
-    motorSpeed = 45;
-    motorMovementDuration = 500;
-    motorFrequency = 2000;
+  if(!strcmp(mode, "idle")) {
+    setIdleMode();
+  } else if (!strcmp(mode, "regular")) {
+    setRegularMode();
+    setIdleModeTime = now + value;
+  } else if (!strcmp(mode, "important")) {
+    setImportantMode();
+    setIdleModeTime = now + value;
+  } else if (!strcmp(mode, "habit")) {
+    setHabitMode();
+    setIdleModeTime = now + value;
+  } else if (!strcmp(mode, "gym")) {
+    setGymMode();
+    setIdleModeTime = now + value;
+  } else {
+    // invalid mode received
+    return -1;
   }
 
   return 0;
 }
 
-void setup() {
-  accel.init();
-
-  Serial.begin(9600);
-  pinMode(D7, OUTPUT);
-  digitalWrite(D7, ledState);
-  servo.attach(servoPin);
-  servo.write(servoPos);
-  Serial.println("finished setup");
-
-  Particle.function("setstate", setState);
-}
-
 void readAccel() {
-  int tap;
+  //int tap;
 
   accel.read();
   queueAccelRead();
@@ -152,8 +217,8 @@ void queueAccelRead() {
 }
 
 void toggleLed() {
-  ledState = (ledState == HIGH ? LOW : HIGH);
-  digitalWrite(D7, ledState);
+  debugLedState = (debugLedState == HIGH ? LOW : HIGH);
+  digitalWrite(debugLedPin, debugLedState);
 
   servoPos = (servoPos ==  180 ?   0 :  180);
   servo.write(servoPos);
@@ -236,6 +301,22 @@ void checkShake() {
   }
 }
 
+void checkServo() {
+  // TODO
+}
+
+void checkLed() {
+  // TODO
+}
+
+void checkMelody() {
+  // TODO
+}
+
+void checkMotor() {
+  // TODO
+}
+
 void loop() {
   now = millis();
 
@@ -249,5 +330,32 @@ void loop() {
     ledCounter = now;
     toggleLed();
     Serial.println("I'm alive");
+  }
+
+  if(now > setIdleModeTime) {
+    setIdleMode();
+  }
+
+  if(cicleInterval && (now - lastActive > cicleInterval)) {
+    state = ACTIVE;
+    lastActive = now;
+  }
+
+  if(state == ACTIVE) {
+    if(servoFrequency) {
+      checkServo();
+    }
+    if(ledBlinking) {
+      checkLed();
+    }
+    if(melody) {
+      checkMelody();
+    }
+    if(motorSpeed) {
+      checkMotor();
+    }
+    if(now - lastActive > activeInterval) {
+      state = INACTIVE;
+    }
   }
 }
