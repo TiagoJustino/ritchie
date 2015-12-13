@@ -1,6 +1,5 @@
-<!-- google calendar js sample code -->
-
 <!--
+Code that queries calendar data to be used for Project Ritchie, the reminder robot.
 Algo:
  - Every 5mins, query calendar and retrieve list of upcoming events in the next
  2 hrs, sorted by start time
@@ -13,28 +12,11 @@ Algo:
     - If concurrent events are present, save timestamp and colorId of the most
      important event
  - At start time of the saved event,
-    - verify that the event still exists. If event still exists, call
-    SparkFunction, which will trigger the action function in Photon
+    - call SparkFunction, which will trigger the action function in Photon
   -->
 
-  <!--
-  Color ID mapping for Google Calendar Events:
-  [colorName] - [colorId]
-  Blue - 1
-  Green - 2
-  Purple - 3
-  Red - 4
-  Yellow - 5
-  Orange - 6
-  Turquoise - 7
-  Grey - 8
-  Bold Blue - 9
-  Bold Green - 10
-  Bold Red - 11
-  -->
-
-<!-- To run this code, you need Python 2.x to run a local server
-$python -m SimpleHTTPServer 8000 -->
+  <!-- To run this code, you need Python 2.x to run a local server
+  $python -m SimpleHTTPServer 8000 -->
 
 <html>
   <head>
@@ -44,6 +26,12 @@ $python -m SimpleHTTPServer 8000 -->
       var CLIENT_ID = '<CLIENT_ID>';
 
       var SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
+
+      //global variables for storing next event startTime, endTime & flag
+      var now = new Date();
+      var eventStart = new Date();
+      var eventEnd = new Date();
+      var eventFlag = 0;
 
       /**
        * Check if current user has authorized this application.
@@ -100,71 +88,161 @@ $python -m SimpleHTTPServer 8000 -->
        * the authorized user's calendar. If no events are found an
        * appropriate message is printed.
        */
-      function listUpcomingEvents() {
-        //Date variable that saves current time
-        var now = new Date();
+       function listUpcomingEvents() {
+         var index;
 
-        //Date variable that will filter events to only within the next 2hrs
-        var timeFilter = new Date();
-        timeFilter.setHours(timeFilter.getHours()+2);
-        //console.log(now);
-        //console.log(timeFilter);
+         //creating categories for events
+         //we'll use this scheme:
+         //low priority or general events = 10
+         //habit/activity = 20
+         //gym events = 21
+         //alarm event = 22
+         //important events = 30
 
-        var request = gapi.client.calendar.events.list({
-          'calendarId': 'primary',
-          'timeMin': (now).toISOString(),
-          'timeMax': (timeFilter).toISOString(),
-          'showDeleted': false,
-          'singleEvents': true,
-          //'maxResults': 10,
-          'orderBy': 'startTime'
-        });
+         var category1=0;
 
-        request.execute(function(resp) {
-          var events = resp.items;
-          appendPre('Upcoming events:');
+         //Date variable that saves current time
+         console.log("current time:"+now);
 
-          if (events.length > 0) {
-            for (i = 0; i < events.length; i++) {
-              var event = events[i];
-              //console.log(event);
-              var when = event.start.dateTime;
+         //Date variable that will filter events to only within the next 2hrs
+         var timeFilter = new Date();
+         timeFilter.setHours(timeFilter.getHours()+2);
+         console.log("filter time:"+timeFilter);
 
-              if (!when) {
-                when = event.start.date;
-              }
+         //querying list of upcoming events based on our parameters
+         var request = gapi.client.calendar.events.list({
+           'calendarId': 'primary',
+           'timeMin': (now).toISOString(),
+           'timeMax': (timeFilter).toISOString(),
+           'showDeleted': false,
+           'singleEvents': true,
+           //'maxResults': 10,
+           'orderBy': 'startTime'
+         });
 
-              //excluding ongoing events
-              if ((new Date(when)).getTime() < now.getTime()){
-                //if the startTime of event is before current time
-                //ignore this event
-                console.log("event:"+event.summary+"ignored");
-                continue;
-              }
-              else {
-                console.log(event.summary + ' (' + when + ')' + 'colorID: ' + event.colorId);
-                appendPre(event.summary + ' (' + when + ')' + event.colorId);
+         request.execute(function(resp) {
+           var events = resp.items;
+           appendPre('Upcoming events:');
 
-                /*
-                - at this point, save event name, event startTime and colorID
-                for the event --saveAs closest upcoming event
+           //as long as there is atleast one event in the list
+           if (events.length > 0) {
+             console.log("no. of events: "+events.length);
 
-                - check if any other events in the list start at the same time
-                   - If yes, compare flags (colorId) of the concurrent events
-                     - AlertType should be that of the most important event
+             //loop through events (pre-sorted by starting time)
+             for (i = 0; i < events.length; i++) {
 
-                - call SparkFunction at the specified time and pass the following parameters:
-                   :-AlertType
-                */
-              }
-            }
-          }
-          else {
-            appendPre('No upcoming events found.');
-          }
+               var event = events[i];
+               var when = new Date(event.start.dateTime);
 
-        });
-      }
+               console.log("Queried event: "+event.summary+"@"+when);
+
+               if (!when) {
+                 when = event.start.date;
+               }
+
+               //excluding ongoing events
+               if (when.getTime() < now.getTime()) {
+                 //if the startTime of event is before current time
+                 //ignore this event
+                 console.log("ongoing event: "+event.summary+" ignored");
+                 continue;
+               }
+               else {
+                 //CASE: this event is yet to start
+                 console.log("event yet to start:" + event.summary + ' (' + when + ')' + 'colorID: ' + event.colorId);
+                 //appendPre(event.summary + ' (' + when + ')' + event.colorId);
+
+                 /*
+                 - at this point, save event name, event startTime and colorID
+                 for the event as the closest upcoming event
+
+                 - check if any other events in the list start at the same time
+                    - If yes, compare flags (colorId) of the concurrent events
+                      - AlertType should be that of the most important event
+                 */
+
+                 //saving this event details
+                 index = i;
+                 eventStart = when;
+                 eventEnd = event.end.dateTime;
+
+                 console.log("saved event: ");
+                 console.log("index: "+index);
+                 console.log("start: "+eventStart);
+                 console.log("end: "+eventEnd);
+
+                 if(event.colorId==11) {category1=30;}
+                 else if(event.colorId==5) {category1=22;}
+                 else if(event.colorId==8) {category1=21;}
+                 else if(event.colorId==3) {category1=20;}
+                 else {category1=10;}
+
+                 eventFlag = category1;
+                 console.log("flag: "+eventFlag);
+                 //we found atleast one upcoming event in the list,
+                 //no need to loop through the other events for now
+                 break;
+               }
+             }
+
+             //now to check the list if there are any other events with the same startTime
+             for (var j = index+1; j < events.length; j++) {
+               //check if start time is same
+               if(new Date(events[j].start.dateTime).getTime()==eventStart.getTime()) {
+                 console.log("concurrent event found");
+                 //these events start at the same time
+                 //in this case, compare the flags (colorId)
+                 //check which event has highest priority
+                 // BOLDRED (category1=30) > YELLOW(category1=22) > GREY(category1=21) || PURPLE (category1=20)> ALL OTHER COLORS(category1=10)
+                 //ColorsID: 11 > 5 > 8 > 3 > others
+
+                 //temp var to check catergory of this event
+                 var category2;
+                 if(events[j].colorId==11) {category2=30;}
+                 else if(events[j].colorId==5) {category2=22;}
+                 else if(events[j].colorId==8) {category2=21;}
+                 else if(events[j].colorId==3) {category2=20;}
+                 else {category2=10;}
+
+                 if(category2 > category1) {
+                   //switching details to the priority event
+                   console.log(events[j].summary+" seems to be more important.");
+                   eventStart = new Date(events[j].start.dateTime);
+                   eventEnd = new Date(events[j].end.dateTime);
+                   eventFlag = category2;
+                   category1 = eventFlag;
+                 }
+                 else {
+                   //do nothing - check if there are anymore concurrent events
+                   continue;
+                 }
+               }
+               else {
+                 //since the events list is sorted by time,
+                 //if one event in the list does not match,
+                 //none of the later events will match either - SKIP
+                 break;
+               }
+             }
+           }
+           else {
+             //appendPre('No upcoming events found.');
+             console.log("no events found");
+           }
+
+           console.log("eventStart: "+eventStart);
+           console.log("eventEnd: "+eventEnd);
+           console.log("eventFlag: "+eventFlag);
+
+           //calculate millis till event
+           millisToEvent = (eventStart.valueOf() - now.valueOf());
+           console.log("time to event "+millisToEvent);
+
+           //calling a function at event start time
+           //wakeRitchie();
+           setTimeout(wakeRitchie, millisToEvent);
+         });
+       }
 
       /**
        * Append a pre element to the body containing the given message
@@ -178,6 +256,28 @@ $python -m SimpleHTTPServer 8000 -->
         pre.appendChild(textContent);
       }
 
+      function wakeRitchie() {
+        //SparkFunction that calls the photon over the internet
+        //flag tells it what type of action to perform
+        //event end time tells it how long to perform an action
+
+        //calculating millis to event end
+        var millisToEnd = (new Date(eventEnd).valueOf() - now.valueOf());
+
+        //Event tags in photon: idle, regular, important, habit, gym, alarm
+        var eventType;
+        if(eventFlag==10) {eventType="normal";}
+        else if(eventFlag==20) {eventType="habit";}
+        else if(eventFlag==21) {eventType="gym";}
+        else if(eventFlag==22) {eventType="alarm";}
+        else {eventType="important";}
+
+        //call sparkFunction and this as a string (eventType<space>millisToEnd)
+        console.log("Next Event: "+eventType+" "+millisToEnd);
+
+        /////////////////////////////////////////////////////////////////////
+        //SPARK FUNCITON GOES HERE//
+      }
     </script>
     <script src="https://apis.google.com/js/client.js?onload=checkAuth">
     </script>
@@ -193,3 +293,19 @@ $python -m SimpleHTTPServer 8000 -->
     <pre id="output"></pre>
   </body>
 </html>
+
+<!--
+Color ID mapping for Google Calendar Events:
+[colorName] - [colorId]
+Blue - 1
+Green - 2
+Purple - 3
+Red - 4
+Yellow - 5
+Orange - 6
+Turquoise - 7
+Grey - 8
+Bold Blue - 9
+Bold Green - 10
+Bold Red - 11
+-->
