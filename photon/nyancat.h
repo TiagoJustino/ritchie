@@ -266,7 +266,7 @@ int nyanMelody[] = {
   NOTE_CS5 
 };
 
-int nyanNoteDurations[] = {
+float nyanNoteDurations[] = {
   // Intro
   16,
   16,

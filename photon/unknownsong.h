@@ -8,7 +8,7 @@ int unknownSongMelody[] = {
   NOTE_C4, NOTE_G3,NOTE_G3, NOTE_A3, NOTE_G3, REST, NOTE_B3, NOTE_C4, REST
 };
 
-int unknownSongNoteDurations[] = {
+float unknownSongNoteDurations[] = {
   8,16,16,8,8,8,8,8,8
 };
 
