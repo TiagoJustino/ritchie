@@ -37,7 +37,7 @@ int motorPin = D2;
 int servoPin = D3;
 int ledPin = D4;
 int debugLedPin = D7;
-int debugLedState = HIGH;
+int debugLedState = LOW;
 int ledPattern[] = {500, 500, 500, 1000};
 int ledPatternIndex = 0;
 int ledPatternLength = 4;
@@ -132,6 +132,7 @@ void setup() {
 void setIdleMode() {
   Serial.println("going idle");
   digitalWrite(ledPin, LOW);
+  digitalWrite(debugLedPin, LOW);
   servoCurrentAngle = SERVO_MAX_ANGLE;
   servo.write(servoCurrentAngle);
   idle = true;
@@ -144,6 +145,7 @@ void setIdleMode() {
   melodyLength = 0;
   melodyDurations = NULL;
   motorSpeed = 0;
+  motor.write(90);
   motorMovementDuration = 0;
   motorFrequency = 0;
 }
@@ -384,8 +386,8 @@ void checkShake() {
     if(!shaking) {
       shakeStartTime = now;
       Serial.println("Started Shaking.");
-      if(!idle) {
-        tone(buzzerPin, NOTE_C7, 200);
+      if(!idle && !nyan) {
+        tone(buzzerPin, NOTE_C7, 500);
         setIdleMode();
       }
       shaking = true;
@@ -431,6 +433,7 @@ void checkLed() {
   ledNextCheck = now + ledPattern[ledPatternIndex];
 
   digitalWrite(ledPin, !(ledPatternIndex % 2));
+  digitalWrite(debugLedPin, !(ledPatternIndex % 2));
 
   ++ledPatternIndex;
   if(ledPatternIndex == ledPatternLength) {
@@ -480,6 +483,7 @@ void goInactive() {
   melodyNoteIndex = 0;
   motor.write(90);
   digitalWrite(ledPin, LOW);
+  digitalWrite(debugLedPin, LOW);
   state = INACTIVE;
 }
 
@@ -519,11 +523,14 @@ void loop() {
 
   if(now - debugLedCounter >= ledFrequency) {
     debugLedCounter = now;
-    toggleDebugLed();
+    // toggleDebugLed();
     Serial.println("I'm alive");
   }
 
   if(nyan) {
+    if(accel.readTap()) {
+      leaveNyanMode();
+    }
     checkNyan();
     return;
   }
