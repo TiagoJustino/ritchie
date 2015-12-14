@@ -11,7 +11,7 @@
 // at 25ms rate, 80 positions store 2s.
 #define ACCEL_QUEUE_SIZE 20
 
-#define SHAKE_TRESHOLD 1500000
+#define SHAKE_TRESHOLD 400000
 
 #define LOW_SERVO_FREQUENCY 1500
 #define MEDIUM_SERVO_FREQUENCY 1000
@@ -56,9 +56,15 @@ unsigned long lastActive;
 unsigned long setIdleModeTime;
 unsigned long nextMelodyNoteCounter;
 unsigned long motorNextCheck;
+unsigned long shakeStartTime;
+unsigned long ledSignalingCounter;
+unsigned long nyanShakeDuration = 3000;
 
 boolean idle = true;
 boolean motorMoving = false;
+boolean nyan = false;
+boolean sameNyanShake = false;
+boolean dontDisturb = false;
 
 int melodyNoteIndex;
 
@@ -88,6 +94,12 @@ unsigned long readAccelCounter;
 unsigned long debugLedCounter;
 
 int state = INACTIVE;
+
+const uint32_t VIBGYOR_Colors[] = {
+  0xEE82EE, 0x4B0082, 0x0000FF, 0x00FF00, 0xFFFF00, 0xFFA500, 0xFF0000
+};
+const int VIBGYOR_Size = sizeof (VIBGYOR_Colors) / sizeof (uint32_t);
+int VIBGYOR_Index;
 
 void setIdleMode();
 void setRegularMode();
@@ -314,22 +326,64 @@ double getZVariance() {
   return sum / ((double) ACCEL_QUEUE_SIZE);
 }
 
+void leaveNyanMode() {
+  nyan = false;
+  setIdleMode();
+  LED_Signaling_Stop();
+}
+
+// copied from system/src/system_cloud_internal.cpp (photon firmware code)
+void LED_Signaling_Override(void) {
+  LED_SetSignalingColor(VIBGYOR_Colors[VIBGYOR_Index]);
+  LED_On(LED_RGB);
+  ++VIBGYOR_Index;
+  if (VIBGYOR_Index >= VIBGYOR_Size) {
+    VIBGYOR_Index = 0;
+  }
+}
+
+void setNyanMode() {
+  Serial.println("nyan mode active");
+
+  nyan = true;
+  idle = false;
+  melodyNoteIndex = 0;
+  melody = nyanMelody;
+  melodyLength = nyanMelodyLength;
+  melodyDurations = nyanNoteDurations;
+  LED_Signaling_Start();
+  ledSignalingCounter = now;
+}
+
 void checkShake() {
   int xShake, yShake, zShake;
-  char tmp[128];
   xShake = getXVariance() > SHAKE_TRESHOLD;
   yShake = getYVariance() > SHAKE_TRESHOLD;
   zShake = getZVariance() > SHAKE_TRESHOLD;
-  sprintf(tmp, "%f %f %f", getXVariance(), getYVariance(), getZVariance());
   if(xShake || yShake || zShake) {
     if(!shaking) {
+      shakeStartTime = now;
       Serial.println("Started Shaking.");
+      if(!idle) {
+        tone(buzzerPin, NOTE_C7, 200);
+        setIdleMode();
+      }
       shaking = true;
+    } else {
+      if((now - shakeStartTime > nyanShakeDuration) && (!sameNyanShake)) {
+        sameNyanShake = true;
+        if(!nyan) {
+          setNyanMode();
+        } else {
+          leaveNyanMode();
+        }
+      }
     }
   } else {
     if(shaking) {
       Serial.println("Stopped Shaking.");
       shaking = false;
+      sameNyanShake = false;
     }
   }
 }
@@ -409,6 +463,26 @@ void goInactive() {
   state = INACTIVE;
 }
 
+void checkNyan() {
+  if(now - ledSignalingCounter >= 100) {
+    ledSignalingCounter = now;
+    LED_Signaling_Override();
+  }
+  checkMelody();
+}
+
+void checkOrientation() {
+  byte orientation = accel.readPL(); 
+  if(orientation != LOCKOUT) {
+    if(!dontDisturb) {
+      goInactive();
+    }
+    dontDisturb = true;
+  } else {
+    dontDisturb = false;
+  }
+}
+
 void loop() {
   now = millis();
 
@@ -416,12 +490,22 @@ void loop() {
     readAccelCounter = now;
     readAccel();
     checkShake();
+    checkOrientation();
+  }
+
+  if(dontDisturb) {
+    return;
   }
 
   if(now - debugLedCounter >= ledFrequency) {
     debugLedCounter = now;
     toggleDebugLed();
     Serial.println("I'm alive");
+  }
+
+  if(nyan) {
+    checkNyan();
+    return;
   }
 
   if(idle == false && now > setIdleModeTime) {
@@ -435,7 +519,7 @@ void loop() {
   }
 
   if(accel.readTap() && state == ACTIVE) {
-    tone(buzzerPin, NOTE_DS7, 200);
+    tone(buzzerPin, NOTE_G7, 200);
     goInactive();
   }
 
