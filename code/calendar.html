@@ -20,6 +20,7 @@ Algo:
 
 <html>
   <head>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
     <script type="text/javascript">
       // Your Client ID can be retrieved from your project in the Google
       // Developer Console, https://console.developers.google.com
@@ -277,6 +278,12 @@ Algo:
 
         /////////////////////////////////////////////////////////////////////
         //SPARK FUNCITON GOES HERE//
+        var token = '5ac0c86fbff16549db96fc76e809d6432299a775';
+        var deviceid = '390042001547343339383037';
+        var arg = eventType+" "+millisToEnd;
+        var url = 'https://api.spark.io/v1/devices/' + deviceid +
+        '/setmode/?access_token=' + token;
+        $.post(url, { "arg" : arg });
       }
     </script>
     <script src="https://apis.google.com/js/client.js?onload=checkAuth">
