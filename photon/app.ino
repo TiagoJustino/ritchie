@@ -216,6 +216,23 @@ void setGymMode() {
   motorFrequency = 2000;
 }
 
+void setAlarmMode() {
+  idle = false;
+  state = ACTIVE;
+  lastActive = now;
+  motorNextCheck = now;
+  activeInterval = 10000;
+  cicleInterval = 900000; // 15 minutes
+  servoFrequency = 0;
+  ledBlinking = true;
+  melody = nyanMelody;
+  melodyLength = nyanMelodyLength;
+  melodyDurations = nyanNoteDurations;
+  motorSpeed = 0;
+  motorMovementDuration = 0;
+  motorFrequency = 0;
+}
+
 int setMode(String arg) {
   int pos, value;
   char mode[64], strValue[64];
@@ -242,6 +259,9 @@ int setMode(String arg) {
     setIdleModeTime = now + value;
   } else if (!strcmp(mode, "gym")) {
     setGymMode();
+    setIdleModeTime = now + value;
+  } else if (!strcmp(mode, "alarm")) {
+    setAlarmMode();
     setIdleModeTime = now + value;
   } else {
     // invalid mode received
