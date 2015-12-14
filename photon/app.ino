@@ -13,26 +13,39 @@
 
 #define SHAKE_TRESHOLD 1500000
 
-#define LOW_SERVO_FREQUENCY 250
-#define MEDIUM_SERVO_FREQUENCY 500
-#define HIGH_SERVO_FREQUENCY 1000
+#define LOW_SERVO_FREQUENCY 1500
+#define MEDIUM_SERVO_FREQUENCY 1000
+#define HIGH_SERVO_FREQUENCY 500
 
 #define INACTIVE 0
 #define   ACTIVE 1
+
+#define SERVO_MAX_ANGLE 70
+#define SERVO_MIN_ANGLE 40
+
+#define FORWARD  1
+#define BACKWARD 0
 
 Servo servo;
 Servo motor;
 
 MMA8452Q accel;
 
-unsigned long ledFrequency = 1000;
-int buzzerPin = D2;
-int motorPin = D3;
+unsigned long ledFrequency = 3000;
+int buzzerPin = WKP;
+int motorPin = D2;
+int servoPin = D3;
 int ledPin = D4;
-int servoPin = D5;
 int debugLedPin = D7;
-int servoPos = 180;
 int debugLedState = HIGH;
+int ledPattern[] = {500, 500, 500, 1000};
+int ledPatternIndex = 0;
+int ledPatternLength = 4;
+
+unsigned long servoNextCheck = 0;
+int servoCurrentAngle = SERVO_MAX_ANGLE;
+int servoTargetAngle = SERVO_MAX_ANGLE;
+int servoDelay = 2;
 
 // how long the robot will be active per cicle.
 // for example, activeInterval = 10000 and cicleInterval = 900000 means:
@@ -41,21 +54,29 @@ unsigned long activeInterval;
 unsigned long cicleInterval;
 unsigned long lastActive;
 unsigned long setIdleModeTime;
+unsigned long nextMelodyNoteCounter;
+unsigned long motorNextCheck;
+
+boolean idle = true;
+boolean motorMoving = false;
+
+int melodyNoteIndex;
 
 int servoFrequency;
 boolean ledBlinking;
-int melodyLengh;
+int melodyLength;
 int* melody;
 float* melodyDurations;
 int motorCurrentSpeed = 90;
 int motorSpeed;
+int motorDirection;
 unsigned long motorMovementDuration;
 unsigned long motorFrequency;
 
 boolean shaking = false;
 
 unsigned long now;
-unsigned long ledCounter;
+unsigned long ledNextCheck;
 
 int accelQueuePos = 0;
 
@@ -64,7 +85,7 @@ struct {
 } accelQueue[ACCEL_QUEUE_SIZE];
 
 unsigned long readAccelCounter;
-unsigned long ledSignalingCounter;
+unsigned long debugLedCounter;
 
 int state = INACTIVE;
 
@@ -88,7 +109,7 @@ void setup() {
   digitalWrite(debugLedPin, debugLedState);
 
   motor.write(motorCurrentSpeed);
-  servo.write(servoPos);
+  servo.write(servoCurrentAngle);
 
   Particle.function("setmode", setMode);
   setIdleMode();
@@ -97,13 +118,18 @@ void setup() {
 }
 
 void setIdleMode() {
+  Serial.println("going idle");
+  digitalWrite(ledPin, LOW);
+  servoCurrentAngle = SERVO_MAX_ANGLE;
+  servo.write(servoCurrentAngle);
+  idle = true;
   state = INACTIVE;
   activeInterval = 0;
   cicleInterval = 0;
   servoFrequency = 0;
   ledBlinking = false;
   melody = NULL;
-  melodyLengh = 0;
+  melodyLength = 0;
   melodyDurations = NULL;
   motorSpeed = 0;
   motorMovementDuration = 0;
@@ -111,13 +137,16 @@ void setIdleMode() {
 }
 
 void setRegularMode() {
+  idle = false;
   state = ACTIVE;
+  lastActive = now;
+  motorNextCheck = now;
   activeInterval = 10000;
   cicleInterval = 900000; // 15 minutes
   servoFrequency = LOW_SERVO_FREQUENCY;
   ledBlinking = true;
   melody = beepMelody;
-  melodyLengh = beepMelodyLength;
+  melodyLength = beepMelodyLength;
   melodyDurations = beepNoteDurations;
   motorSpeed = 0;
   motorMovementDuration = 0;
@@ -125,44 +154,53 @@ void setRegularMode() {
 }
 
 void setImportantMode() {
+  idle = false;
   state = ACTIVE;
+  lastActive = now;
+  motorNextCheck = now;
   activeInterval = 10000;
   cicleInterval = 900000; // 15 minutes
   servoFrequency = HIGH_SERVO_FREQUENCY;
   ledBlinking = true;
   melody = unknownSongMelody;
-  melodyLengh = unknownSongMelodyLength;
+  melodyLength = unknownSongMelodyLength;
   melodyDurations = unknownSongNoteDurations;
   motorSpeed = 90;
-  motorMovementDuration = 250;
+  motorMovementDuration = 1000;
   motorFrequency = 1000;
 }
 
 void setHabitMode() {
+  idle = false;
   state = ACTIVE;
+  lastActive = now;
+  motorNextCheck = now;
   activeInterval = 10000;
   cicleInterval = 900000; // 15 minutes
   servoFrequency = MEDIUM_SERVO_FREQUENCY;
   ledBlinking = true;
   melody = rockyMelody;
-  melodyLengh = rockyMelodyLength;
+  melodyLength = rockyMelodyLength;
   melodyDurations = rockyNoteDurations;
   motorSpeed = 45;
-  motorMovementDuration = 500;
+  motorMovementDuration = 1500;
   motorFrequency = 2000;
 }
 
 void setGymMode() {
+  idle = false;
   state = ACTIVE;
+  lastActive = now;
+  motorNextCheck = now;
   activeInterval = 10000;
   cicleInterval = 900000; // 15 minutes
   servoFrequency = MEDIUM_SERVO_FREQUENCY;
   ledBlinking = true;
   melody = eyeMelody;
-  melodyLengh = eyeMelodyLength;
+  melodyLength = eyeMelodyLength;
   melodyDurations = eyeNoteDurations;
   motorSpeed = 45;
-  motorMovementDuration = 500;
+  motorMovementDuration = 1500;
   motorFrequency = 2000;
 }
 
@@ -202,8 +240,6 @@ int setMode(String arg) {
 }
 
 void readAccel() {
-  //int tap;
-
   accel.read();
   queueAccelRead();
 }
@@ -216,12 +252,9 @@ void queueAccelRead() {
   accelQueuePos = accelQueuePos == ACCEL_QUEUE_SIZE ? 0 : accelQueuePos;
 }
 
-void toggleLed() {
+void toggleDebugLed() {
   debugLedState = (debugLedState == HIGH ? LOW : HIGH);
   digitalWrite(debugLedPin, debugLedState);
-
-  servoPos = (servoPos ==  180 ?   0 :  180);
-  servo.write(servoPos);
 }
 
 double getXMean() {
@@ -302,19 +335,78 @@ void checkShake() {
 }
 
 void checkServo() {
-  // TODO
+  if(servoCurrentAngle != servoTargetAngle) {
+    if(servoCurrentAngle < servoTargetAngle) {
+      ++servoCurrentAngle;
+    }
+    if(servoCurrentAngle > servoTargetAngle) {
+      --servoCurrentAngle;
+    }
+    servo.write(servoCurrentAngle);
+    servoNextCheck = now + servoDelay;
+  }
+  if(servoCurrentAngle == servoTargetAngle) {
+    if(servoTargetAngle == SERVO_MAX_ANGLE) {
+      servoNextCheck = now + servoFrequency;
+    }
+    servoTargetAngle = servoTargetAngle == SERVO_MAX_ANGLE ? SERVO_MIN_ANGLE : SERVO_MAX_ANGLE;
+  }
 }
 
 void checkLed() {
-  // TODO
+  ledNextCheck = now + ledPattern[ledPatternIndex];
+
+  digitalWrite(ledPin, !(ledPatternIndex % 2));
+
+  ++ledPatternIndex;
+  if(ledPatternIndex == ledPatternLength) {
+    ledPatternIndex = 0;
+  }
 }
 
 void checkMelody() {
-  // TODO
+  if(now >= nextMelodyNoteCounter) {
+    int thisNote = melody[melodyNoteIndex];
+    int noteDuration = 880 / melodyDurations[melodyNoteIndex];
+    int pauseBetweenNotes = noteDuration * 1.30;
+    tone(buzzerPin, thisNote, noteDuration);
+    nextMelodyNoteCounter += noteDuration + pauseBetweenNotes;
+    melodyNoteIndex += 1;
+    if(melodyNoteIndex == melodyLength) {
+      melodyNoteIndex = 0;
+    }
+  }
 }
 
 void checkMotor() {
-  // TODO
+  int speed = 90;
+
+  if(motorMoving) {
+    motor.write(90);
+    motorMoving = false;
+    motorNextCheck = now + (motorFrequency - motorMovementDuration);
+  } else {
+    if(motorDirection == FORWARD) {
+      speed = 90 - motorSpeed;
+      motorDirection = BACKWARD;
+    } else {
+      speed = 90 + motorSpeed;
+      motorDirection = FORWARD;
+    }
+    motor.write(speed);
+    motorMoving = true;
+    motorNextCheck = now + motorMovementDuration;
+  }
+}
+
+void goInactive() {
+  servoCurrentAngle = SERVO_MAX_ANGLE;
+  servo.write(servoCurrentAngle);
+  ledPatternIndex = 0;
+  melodyNoteIndex = 0;
+  motor.write(90);
+  digitalWrite(ledPin, LOW);
+  state = INACTIVE;
 }
 
 void loop() {
@@ -326,36 +418,42 @@ void loop() {
     checkShake();
   }
 
-  if(now - ledCounter >= ledFrequency) {
-    ledCounter = now;
-    toggleLed();
+  if(now - debugLedCounter >= ledFrequency) {
+    debugLedCounter = now;
+    toggleDebugLed();
     Serial.println("I'm alive");
   }
 
-  if(now > setIdleModeTime) {
+  if(idle == false && now > setIdleModeTime) {
     setIdleMode();
   }
 
   if(cicleInterval && (now - lastActive > cicleInterval)) {
+    Serial.println("going active");
     state = ACTIVE;
     lastActive = now;
   }
 
+  if(accel.readTap() && state == ACTIVE) {
+    tone(buzzerPin, NOTE_DS7, 200);
+    goInactive();
+  }
+
   if(state == ACTIVE) {
-    if(servoFrequency) {
+    if(servoFrequency && (now >= servoNextCheck)) {
       checkServo();
     }
-    if(ledBlinking) {
+    if(ledBlinking && (now >= ledNextCheck)) {
       checkLed();
     }
     if(melody) {
       checkMelody();
     }
-    if(motorSpeed) {
+    if(motorSpeed && now >= motorNextCheck) {
       checkMotor();
     }
     if(now - lastActive > activeInterval) {
-      state = INACTIVE;
+      goInactive();
     }
   }
 }

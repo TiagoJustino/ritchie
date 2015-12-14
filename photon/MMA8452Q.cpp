@@ -61,7 +61,9 @@ byte MMA8452Q::init(MMA8452Q_Scale fsr, MMA8452Q_ODR odr)
 	// Multiply parameter by 0.0625g to calculate threshold.
   // 0x08 = 8. 8*0.0625 = 0.5
   // 0x20 = 32. 32*0.0625 = 2
-	setupTap(0x20, 0x80, 0x80); // Disable z, y, set x to 2g
+	setupTap(0x80, 0x80, 0x78); // Disable x, z, set y to 2g
+	// setupTap(0x80, 0x80, 0x20); // Disable x, y, set z to 2g
+	// setupTap(0x20, 0x80, 0x80); // Disable z, y, set x to 2g
 	// setupTap(0x80, 0x80, 0x08); // Disable x, y, set z to 0.5g
 	
 	active();  // Set to active to start reading
