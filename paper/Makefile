@@ -1,4 +1,4 @@
-TARGET=ritchie-proposal
+TARGET=ritchie-paper
 FIGS=
 
 %.pdf: %.tex
